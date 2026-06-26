@@ -38,7 +38,7 @@ import os
 import random
 import time
 import keyboard
-
+import tkinter as tk
 
 ##############################################################
 # Globální proměnné
@@ -56,33 +56,146 @@ GAME_OVER = False
 
 
 ##############################################################
-# Funkce pro vykreslení hrací plochy
-# render_board()
+def render_board(width: int, height: int, snake_pos: tuple[int, int], food_pos: tuple[int, int]) -> None:
+    """Vykresli herni desku pro hada."""
+    for y in range(height):
+        radek = ""
 
+        for x in range(width):
+            # 1) Okraje: první/poslední sloupec (x) nebo první/poslední řádek (y)
+            if x == 0 or x == width - 1 or y == 0 or y == height - 1:
+                radek += "#"
+            
+            # 2) Jídlo (O) na své specifické pozici
+            elif (x, y) == food_pos:
+                radek += "O"
+            
+            # 3) Had (X) na své specifické pozici
+            elif (x, y) == snake_pos:
+                radek += "X"
+            
+            # 4) Všechna ostatní políčka uvnitř budou tečky
+            else:
+                radek += "."
+
+        print(radek)
 
 ##############################################################
-# Funkce pro umístění hvězdičky
-# place_food()
+import os
+import random
 
+# Globální nastavení hry
+width = 20
+height = 10
+game_over = False
 
-##############################################################
-# Funkce pro pohyb hráče
-# move_player(direction)
+# Počáteční pozice (had začíná uprostřed, jídlo na náhodném místě)
+snake_pos = (10, 5)
+direction = "d"  # Výchozí směr doprava
 
+def place_food() -> tuple[int, int]:
+    """Vygeneruje náhodnou pozici jídla mimo okraje."""
+    food_x = random.randint(1, width - 2)
+    food_y = random.randint(1, height - 2)
+    return (food_x, food_y)
 
-##############################################################
-# Hlavní herní smyčka
-# game_loop()
+food_pos = place_food()
+
+def pohni_hadem(current_pos: tuple[int, int], current_direction: str) -> tuple[int, int]:
+    """Vrátí novou pozici hada podle zadaného směru (o 1 políčko v mřížce)."""
+    x, y = current_pos
+
+    if current_direction == "w":
+        return (x, y - 1)  # Nahoru
+    elif current_direction == "s":
+        return (x, y + 1)  # Dolů
+    elif current_direction == "a":
+        return (x - 1, y)  # Doleva
+    elif current_direction == "d":
+        return (x + 1, y)  # Doprava
+    else:
+        return current_pos
+
+def kontrola_kolize(x: int, y: int, max_width: int, max_height: int) -> bool:
+    """Zkontroluje, zda hlava hada nenarazila do zdi okraje."""
+    if x <= 0 or x >= max_width - 1 or y <= 0 or y >= max_height - 1:
+        print("Konec hry - náraz do zdi!")
+        return True
+    return False
+
+def render_board(max_width: int, max_height: int, s_pos: tuple[int, int], f_pos: tuple[int, int]) -> None:
+    """Vykreslí herní desku s okraji (#), hadem (X), jídlem (O) a prázdnem (.)."""
+    if not game_over:
+        root.after(200, game_step)
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    for y in range(max_height):
+        radek = ""
+        for x in range(max_width):
+            if x == 0 or x == max_width - 1 or y == 0 or y == max_height - 1:
+                radek += "#"
+            elif (x, y) == f_pos:
+                radek += "O"
+            elif (x, y) == s_pos:
+                radek += "X"
+            else:
+                radek += "."
+        print(radek)
+
+def game_step():
+    global game_over, snake_pos, food_pos
+
+    if game_over:
+        return
+
+    nova_pozice = pohni_hadem(snake_pos, direction)
+    x, y = nova_pozice
+
+    if kontrola_kolize(x, y, width, height):
+        game_over = True
+        return
+
+    snake_pos = nova_pozice
+
+    if snake_pos == food_pos:
+        food_pos = place_food()
+
+    render_board(width, height, snake_pos, food_pos)
 
 
 ##############################################################
 ### Spuštění programu - MAIN
+def on_key(event):
+    global direction
 
+    if event.keysym == "Up":
+        direction = "w"
+    elif event.keysym == "Down":
+        direction = "s"
+    elif event.keysym == "Left":
+        direction = "a"
+    elif event.keysym == "Right":
+        direction = "d"
+root = tk.Tk()
+root.bind("<KeyPress>", on_key)
+root.after(200, game_step)
+root.mainloop()
 if __name__ == "__main__":
-    print("Použijte klávesy W, A, S, D pro pohyb. Stiskněte Ctrl+C pro ukončení.")
-    
-    FOOD_POS = place_food()
+    print("Použijte klávesy w, a, s, d pro pohyb. Stiskněte Ctrl+C pro ukončení.")
+
+    width = 20
+    height = 10
+    direction = "d"
+    snake_pos = (5, 5)
+    game_over = False
+    food_pos = place_food()
+
     try:
-        game_loop()
+        render_board(width, height, snake_pos, food_pos)
+
+        if not game_over:
+            root.after(200, game_step)
+        print("\nHra skončila!")
+
     except KeyboardInterrupt:
-        print("\nHra ukončena. Děkujeme za hraní!")
+        print("\nHra ukončena uživatelem.")
